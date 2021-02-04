@@ -1,0 +1,65 @@
+#include <iostream>
+#include <math.h>
+#include <stdio.h>
+using namespace std;
+
+__global__ void factorial(int* input)
+{
+	const int tid = threadIdx.x;
+
+	auto step_size = 1;
+	int number_of_threads = blockDim.x;
+
+	while (number_of_threads > 0)
+	{
+		if (tid < number_of_threads) // still alive?
+		{
+			const auto fst = tid * step_size * 2;
+			const auto snd = fst + step_size;
+			input[fst] *= input[snd];
+		}
+
+		step_size <<= 1; 
+		number_of_threads >>= 1;
+	}
+}
+int nextPowerOf2(int n) 
+{ 
+    n--; 
+    n |= n >> 1; 
+    n |= n >> 2; 
+    n |= n >> 4; 
+    n |= n >> 8; 
+    n |= n >> 16; 
+    n++; 
+    return n; 
+}
+
+int main()
+{
+	int n =10;
+  scanf("%d",&n);
+  int count = nextPowerOf2(n);
+	const int size = count * sizeof(int);
+	int h[count];
+  for(int i=0;i<n;i++){
+      h[i] = i+1;
+  }
+ for(int i=n;i<count;i++){
+      h[i] = 1;
+  }
+
+	int* d; 
+	cudaMalloc(&d, size);
+	cudaMemcpy(d, h, size, cudaMemcpyHostToDevice);
+
+	factorial <<<1, count / 2 >>>(d);
+
+	int result;
+	cudaMemcpy(&result, d, sizeof(int), cudaMemcpyDeviceToHost);
+
+	cout << "factorial is " << result << endl;
+
+	cudaFree(d);
+	return 0;
+}
